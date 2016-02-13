@@ -17,11 +17,6 @@ define(function(require) {
 	// TODO: need to filter it myself
 	var maxCloudCover = 10; //%
 
-
-	$("#beautifulBtn").click(function() {
-		$("#beautifulBtn").toggleClass("beautifulSelected");
-	});
-
 	function loadCurrentElement() {
 		var currentFeature = featureList[currentElementIndex];
 		var url = plApi.loadFeatureImageUrl(currentFeature);
@@ -57,6 +52,7 @@ define(function(require) {
 	}
 
 	$("#prevBtn").click(function() {
+		// TODO: make traversing to the past as it works for the next images
 		if (currentElementIndex === 0) {
 			return;
 		} else if (currentElementIndex === 1) {
@@ -82,7 +78,9 @@ define(function(require) {
 		nextImage();
 	});
 
-
+	$("#beautifulBtn").click(function() {
+		$("#beautifulBtn").toggleClass("beautifulSelected");
+	});
 
 	(function init() {
 		$("#prevBtn").hide();
