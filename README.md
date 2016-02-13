@@ -1,4 +1,4 @@
-# planetlabs Satellite Image Viewer
+# Planet labs Satellite Image Viewer
 Main functionality, as the name hints, is to view planetlabs (https://www.planet.com/) satellite imagery with simple next-previous image navigation.
 
 Assumptions:
