@@ -31,21 +31,28 @@ define(function(require) {
 	}
 
 	function loadScene(sceneList, prev) {
-		sceneList.features.forEach(function(featureObj) {
-			var feature = plApi.sceneToGeoJsonFeature(featureObj);
-			var url = plApi.loadFeatureImageUrl(feature);
-			if (prev) {
-				addFeatureImageToFlow(feature, true);
-			} else {
-				addFeatureImageToFlow(feature);
-			}
-		});
-
 		if (prev) {
 			updateNextPrevLinkValues(sceneList, true);
 		} else {
 			updateNextPrevLinkValues(sceneList, false, true);
 		}
+
+		sceneList.features.forEach(function(featureObj) {
+
+			var feature = plApi.sceneToGeoJsonFeature(featureObj);
+			var url = plApi.loadFeatureImageUrl(feature);
+
+			var image = new Image();
+			image.src = url;
+
+			image.onload = function() {
+				if (prev) {
+					addFeatureImageToFlow(feature, true);
+				} else {
+					addFeatureImageToFlow(feature);
+				}
+			};
+		});
 	}
 
 	function loadNextImages(prev) {
@@ -109,8 +116,7 @@ define(function(require) {
 		scrollWheelSpeed: 0.0, // scroll switched off
 		flowSpeedFactor: 0.6,
 
-		onclickActiveItem: function(item) {
-		},
+		onclickActiveItem: function(item) {},
 
 		onclickInactiveItem: function(item) {
 			loadNewScenesIfNeeded(this._targetPosition, this.getNumberOfItems());
