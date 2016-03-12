@@ -8,93 +8,174 @@ define(function(require) {
 
 	planet.auth.setKey("PL_API_KEY");
 
-	var featureList = [];
-	var currentElementIndex = 0;
 	var nextScenelistLink;
 	var prevScenelistLink;
 
+	// hide for initialization time
+	$("#preButton").hide();
+	$("#nextButton").hide();
+
 	// options:
-	// TODO: need to filter it myself
+	// TODO: need to filter scenes
 	var maxCloudCover = 10; //%
 
-	function loadCurrentElement() {
-		var currentFeature = featureList[currentElementIndex];
-		var url = plApi.loadFeatureImageUrl(currentFeature);
-		util.setViewportImage(url);
+	function updateNextPrevLinkValues(sceneList, onlyPrev, onlyNext) {
+		if (onlyNext) {
+			nextScenelistLink = plApi.addApiKey(sceneList.links.prev); // api prev is actually forward in time
+		} else if (onlyPrev) {
+			prevScenelistLink = plApi.addApiKey(sceneList.links.next); // api next is actually further in the past
+		} else {
+			nextScenelistLink = plApi.addApiKey(sceneList.links.prev); // api prev is actually forward in time
+			prevScenelistLink = plApi.addApiKey(sceneList.links.next); // api next is actually further in the past
+		}
 	}
 
-	function updateNextPrevLinkValues(sceneList) {
-		nextScenelistLink = plApi.addApiKey(sceneList.links.next);
-		prevScenelistLink = plApi.addApiKey(sceneList.links.prev);
-	}
-
-	function nextImage() {
-		currentElementIndex++;
-		loadCurrentElement();
-	}
-	function prevImage() {
-		currentElementIndex--;
-		loadCurrentElement();
-	}
-
-	function preloadSceneList(sceneList) {
-		console.log("Preloading list of scenes")
+	function loadScene(sceneList, prev) {
 		sceneList.features.forEach(function(featureObj) {
 			var feature = plApi.sceneToGeoJsonFeature(featureObj);
 			var url = plApi.loadFeatureImageUrl(feature);
-			preload(url);
+			if (prev) {
+				addFeatureImageToFlow(feature, true);
+			} else {
+				addFeatureImageToFlow(feature);
+			}
 		});
-	}
-	
-	function preload(url) {
-		var img = new Image();
-		img.src = url;
-	}
 
-	$("#prevBtn").click(function() {
-		// TODO: make traversing to the past as it works for the next images
-		if (currentElementIndex === 0) {
-			return;
-		} else if (currentElementIndex === 1) {
-			$("#prevBtn").hide();
+		if (prev) {
+			updateNextPrevLinkValues(sceneList, true);
+		} else {
+			updateNextPrevLinkValues(sceneList, false, true);
 		}
-		prevImage()
-	});
+	}
 
-	$("#nextBtn").click(function() {
-		// TODO: what happens when there aren't any additional images available
-		if ((currentElementIndex + 1) === (featureList.length - 10)) { // -10 to execute reload before user is on the last image
-			// load more images
-			plApi.getSceneList(undefined, nextScenelistLink, function (sceneList) {
-				plApi.addToFeatureList(sceneList, featureList);
-				updateNextPrevLinkValues(sceneList);
-				setTimeout(function() {
-					preloadSceneList(sceneList);
-				}, 1000); // preload a bit later so we would not block showing next image
-				console.log("Loaded more images.");
-			});
+	function loadNextImages(prev) {
+		var currentUrl;
+		if (prev) {
+			currentUrl = prevScenelistLink;
+		} else {
+			currentUrl = nextScenelistLink;
 		}
-		$("#prevBtn").show();
-		nextImage();
-	});
+		plApi.getSceneList(function(sceneList) {
+			loadScene(sceneList, prev);
+		}, currentUrl);
+	}
 
-	$("#beautifulBtn").click(function() {
-		$("#beautifulBtn").toggleClass("beautifulSelected");
+	function loadPrevImages() {
+		loadNextImages(true);
+	}
+
+	function addImageToFlow(url, toFirst, title) {
+		var image;
+		if (title !== undefined) {
+			image = $("<img class='content' src='" + url + "' title='" + title + "'/>")[0];
+		} else {
+			image = $("<img class='content' src='" + url + "'/>")[0];
+		}
+		if (toFirst) {
+			sceneFlow.addItem(image, 'first');
+		} else {
+			sceneFlow.addItem(image, 'last');
+		}
+	}
+
+	function addFeatureImageToFlow(feature, toFirst) {
+		addImageToFlow(plApi.loadFeatureImageUrl(feature), toFirst, feature.id_);
+	}
+
+	var imagePreloadingThreshold = 10;
+
+	function loadNewScenesIfNeeded(targetPosition, numOfItems) {
+		if (targetPosition < imagePreloadingThreshold) {
+			loadPrevImages();
+		}
+		if (numOfItems !== undefined && targetPosition > numOfItems - (1 + imagePreloadingThreshold)) {
+			loadNextImages();
+		}
+	}
+
+	var sceneFlow = new ContentFlow("sceneImageFlow", {
+		reflectionHeight: 0,
+		circularFlow: false,
+		verticalFlow: false,
+		scaleFactor: 5,
+		scaleFactorLandscape: 0.33,
+		startItem: 'first',
+		visibleItems: -1, // doesn't seems to work normally if value isn't -1
+		endOpacity: 1.0,
+		biggestItemPos: "last",
+		maxItemHeight: window.innerHeight,
+		fixItemSize: true,
+		flowDragFriction: 0.0, // drag switched off
+		scrollWheelSpeed: 0.0, // scroll switched off
+		flowSpeedFactor: 0.6,
+
+		onclickActiveItem: function(item) {
+		},
+
+		onclickInactiveItem: function(item) {
+			loadNewScenesIfNeeded(this._targetPosition, this.getNumberOfItems());
+
+			if (this._targetPosition < 1) {
+				$(".preButton").hide();
+			} else if (this._targetPosition > this.getNumberOfItems() - 1) {
+				$(".nextButton").hide();
+			} else {
+				$(".nextButton").show();
+				$(".preButton").show();
+			}
+
+		},
+
+		onclickPreButton: function(event) {
+
+			loadNewScenesIfNeeded(this._targetPosition, this.getNumberOfItems());
+			$(".nextButton").show();
+
+			if (this._targetPosition === 0) {
+				$(".preButton").hide();
+				return;
+			} else if (this._targetPosition === 1) {
+				$(".preButton").hide();
+			}
+
+			this.moveToIndex('pre');
+			return Event.stop(event);
+		},
+
+		onclickNextButton: function(event) {
+
+			loadNewScenesIfNeeded(this._targetPosition, this.getNumberOfItems());
+			$(".preButton").show();
+
+			if (this._targetPosition === this.getNumberOfItems() - 1) {
+				$(".nextButton").hide();
+				return;
+			} else if (this._targetPosition === this.getNumberOfItems() - 2) {
+				$(".nextButton").hide();
+			}
+
+			this.moveToIndex('next');
+			return Event.stop(event);
+		}
 	});
+	sceneFlow.init();
+
 
 	(function init() {
-		$("#prevBtn").hide();
-		$("#nextBtn").hide();
 		var oldestAcquireDate = new Date(2015, 9, 21, 0, 0, 0, 0).toISOString();
 
 		function populateFeatureListAndLoadFirstImage(sceneList) {
-			currentElementIndex = 0;
 			updateNextPrevLinkValues(sceneList);
-			preloadSceneList(sceneList);
-			plApi.addToFeatureList(sceneList, featureList);
-			loadCurrentElement();
-			$("#nextBtn").show();
+
+			// load images so flow's active element will be on the center
+			loadScene(sceneList);
+			loadPrevImages();
+
+			setTimeout(function() { // preload some additionally
+				loadNextImages();
+				loadPrevImages();
+			}, 500);
 		}
-		plApi.getSceneList(oldestAcquireDate, undefined, populateFeatureListAndLoadFirstImage);
+		plApi.getSceneListFromMiddlePage(oldestAcquireDate, populateFeatureListAndLoadFirstImage);
 	})();
 });

@@ -5,16 +5,16 @@
     <meta charset="UTF-8">
     <title>Beautiful Earth</title>
     <script data-main="scripts/app" src="scripts/lib/require.js"></script>
+    <script language="JavaScript" type="text/javascript" src="scripts/lib/contentflow/contentflow.js"></script>
 
     <link rel="stylesheet" href="style/main.css" type="text/css">
 </head>
 <body style="margin:0px; min-width: 300px;">
-    <div id="image" style="height:100vh; background-repeat: no-repeat; background-size: cover;">
-        <div id="userInteractions" style="height: 100%;">
-            <div id="prevBtn" class="navigationBtn btn" style="height:100%;float: left;"></div>
-            <img id="beautifulBtn" src="style/images/flower_small.png" class="beautifulBtn" style="display: none"></img>
-            <div id="nextBtn" class="navigationBtn btn" style="height:100%;float: right;"></div>
-        </div>
+     <div id="sceneImageFlow" style="background-color: black;">
+        <div class="loadIndicator"><div class="indicator"></div></div>
+        <div class="preButton navigationBtn btn"></div>
+        <div class="nextButton navigationBtn btn"></div>
+        <div class="flow"></div>
     </div>
 </body>
 </html>

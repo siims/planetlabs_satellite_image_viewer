@@ -5,18 +5,23 @@ define(function(require) {
 
 	return {
 		addApiKey: function(url) {
+			if (url === null) {
+				return "";
+			}
 			if (url.indexOf("?") === -1) {
 				return url + "?api_key=" + planet.auth.getKey();
 			}
 			return url + "&api_key=" + planet.auth.getKey();
 		},
 
-		getSceneList: function(date, fullUrl, callback) {
+		getSceneList: function(callback, fullUrl) {
 			if (fullUrl !== undefined) {
 				$.ajax({
 					url: fullUrl,
-			        type: 'GET',
-        			beforeSend: function(xhr){xhr.setRequestHeader('Authorization', 'api-key ' + planet.auth.getKey());},
+					type: 'GET',
+					beforeSend: function(xhr) {
+						xhr.setRequestHeader('Authorization', 'api-key ' + planet.auth.getKey());
+					},
 					success: function(listOfScenes) {
 						console.log("Loaded list of " + listOfScenes.features.length + " scenes.");
 						console.log(listOfScenes)
@@ -30,8 +35,23 @@ define(function(require) {
 			}
 			planet.scenes.search({
 					type: 'ortho',
-					"acquired.gte": date,
-					"count": 20
+					"count": 5
+				})
+				.then(function(listOfScenesPage) {
+					var listOfScenes = listOfScenesPage.data;
+					console.log("Loaded list of " + listOfScenes.features.length + " scenes.");
+					console.log(listOfScenes);
+					callback(listOfScenes);
+				}).catch(function(err) {
+					console.error('Failed to fetch list of scenes:', err.message);
+				});
+		},
+
+		getSceneListFromMiddlePage: function(date, callback) { // currently middle defined by date
+			planet.scenes.search({
+					type: 'ortho',
+					"count": 5,
+					"_page.acquired.lt": date
 				})
 				.then(function(listOfScenesPage) {
 					var listOfScenes = listOfScenesPage.data;

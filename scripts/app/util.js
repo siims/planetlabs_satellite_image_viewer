@@ -47,6 +47,11 @@ define(function(require) {
 
 		setViewportImage: function(url) {
 			$("#image")[0].style.backgroundImage = "url(" + url + ")";
+		},
+
+		preload: function(url) {
+			var img = new Image();
+			img.src = url;
 		}
 	}
 });
